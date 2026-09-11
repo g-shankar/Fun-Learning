@@ -1,10 +1,11 @@
 import AVFoundation
 import Foundation
 
-// MARK: - Gentle looping background music + celebration chime
+// MARK: - Cheerful looping background music + celebration chime
 //
-// music_loop.wav / chime.wav are synthesized placeholders (see /tmp/gen_music.py
-// in the build notes). Final composed tracks will replace them 1:1 — same names.
+// bgm_cheerful.mp3 is the composed ukulele-style loop (see
+// ~/workspace/fun-learning/music/make_bgm.py). Fully synthesized in-house,
+// so there are no licensing issues.
 
 final class MusicPlayer: ObservableObject {
     @Published var muted: Bool = false {
@@ -16,7 +17,7 @@ final class MusicPlayer: ObservableObject {
 
     init() {
         configureSession()
-        if let url = Bundle.main.url(forResource: "music_loop", withExtension: "wav") {
+        if let url = Bundle.main.url(forResource: "bgm_cheerful", withExtension: "mp3") {
             player = try? AVAudioPlayer(contentsOf: url)
             player?.numberOfLoops = -1
             player?.volume = 0.32

@@ -16,8 +16,15 @@ final class GameState: ObservableObject {
     @Published var voiceEnabled: Bool = true
     @Published var narratorVoice: NarratorVoice = .warm
 
+    /// Full-app unlock (one-time purchase or yearly subscription).
+    /// Mirrors StoreManager; persisted via StoreConfig.cachedUnlock.
+    @Published var isUnlocked: Bool = false
+    /// Set to true anywhere to present the paywall (RootView owns the sheet).
+    @Published var paywallRequested: Bool = false
+
     let narrator = Narrator()
     let music = MusicPlayer()
+    let store = StoreManager()
 
     private let defaults = UserDefaults.standard
 
@@ -35,6 +42,11 @@ final class GameState: ObservableObject {
         }
         narrator.voice = narratorVoice
         music.muted = musicMuted
+        // Mirror the store's entitlement; stays live for purchases/restores.
+        isUnlocked = store.isUnlocked
+        store.$isUnlocked
+            .receive(on: DispatchQueue.main)
+            .assign(to: &$isUnlocked)
     }
 
     func save() {
@@ -56,6 +68,12 @@ final class GameState: ObservableObject {
 
     func unlockedCount(for letterCase: LetterCase) -> Int {
         letterCase == .upper ? unlockedUpper : unlockedLower
+    }
+
+    /// Free tier: letters A–C (indices 0..<freeLetterCount), both cases.
+    /// Everything else needs the paid unlock.
+    func canAccessLesson(index: Int) -> Bool {
+        index < StoreConfig.freeLetterCount || isUnlocked
     }
 
     /// Record a finished lesson: award stars, unlock the next stop on the island.

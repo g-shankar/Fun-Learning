@@ -28,6 +28,14 @@ struct RootView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 4) {
+                    if !gameState.isUnlocked {
+                        Button {
+                            gameState.paywallRequested = true
+                        } label: {
+                            Image(systemName: "lock.fill")
+                        }
+                        .accessibilityLabel("Unlock the full app")
+                    }
                     Button {
                         gameState.voiceEnabled.toggle()
                         gameState.narrator.enabled = gameState.voiceEnabled
@@ -64,6 +72,9 @@ struct RootView: View {
         }
         .sheet(isPresented: $showVoicePicker) {
             VoicePickerView(gameState: gameState)
+        }
+        .sheet(isPresented: $gameState.paywallRequested) {
+            PaywallView(gameState: gameState)
         }
     }
 }

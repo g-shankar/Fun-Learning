@@ -73,6 +73,23 @@ struct IslandMapView: View {
                 }
             }
             Spacer()
+            if !gameState.isUnlocked {
+                Button { gameState.paywallRequested = true } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.fill")
+                        Text("Unlock")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.purple)
+                    .clipShape(Capsule())
+                    .shadow(radius: 4)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Unlock the full app")
+            }
             MascotView(state: .wave, size: 84)
         }
         .padding(.horizontal, 20)
@@ -120,6 +137,9 @@ struct IslandMapView: View {
                         if i < unlocked {
                             activeLesson = lesson
                             gameState.narrator.letterTapped(lesson: lesson)
+                        } else if !gameState.canAccessLesson(index: i) {
+                            // Paid node: tapping opens the paywall.
+                            gameState.paywallRequested = true
                         }
                     }
                     .id("node-\(i)")
@@ -148,17 +168,25 @@ struct IslandMapView: View {
         if i < unlocked {
             return gameState.stars[lessons[i].id] != nil ? .done : .current
         }
+        // Paid gate takes precedence over the progression lock: D–Z need unlock.
+        if !gameState.canAccessLesson(index: i) {
+            return .paywalled
+        }
         return .locked
     }
 
     private func nextLesson(after lesson: LetterLesson) -> (() -> Void)? {
         guard let i = lessons.firstIndex(of: lesson),
               i + 1 < lessons.count, i + 1 < unlocked else { return nil }
+        // Reaching the paid boundary: "Next" opens the paywall instead.
+        if !gameState.canAccessLesson(index: i + 1) {
+            return { gameState.paywallRequested = true }
+        }
         return { activeLesson = lessons[i + 1] }
     }
 }
 
-enum LessonNodeState { case locked, current, done }
+enum LessonNodeState { case locked, current, done, paywalled }
 
 struct LessonNode: View {
     let lesson: LetterLesson
@@ -178,7 +206,7 @@ struct LessonNode: View {
                         Circle()
                             .stroke(Color.white.opacity(0.85), lineWidth: 4)
                     )
-                if state == .locked {
+                if state == .locked || state == .paywalled {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 26))
                         .foregroundColor(.white.opacity(0.85))
@@ -212,6 +240,11 @@ struct LessonNode: View {
         switch state {
         case .locked:
             return AnyShapeStyle(Color.gray.opacity(0.55))
+        case .paywalled:
+            return AnyShapeStyle(LinearGradient(
+                colors: [Color(red: 0.75, green: 0.55, blue: 0.95),
+                         Color(red: 0.55, green: 0.35, blue: 0.85)],
+                startPoint: .top, endPoint: .bottom))
         case .current:
             return AnyShapeStyle(LinearGradient(
                 colors: [.orange, Color(red: 1, green: 0.55, blue: 0.3)],
